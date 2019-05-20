@@ -1,7 +1,12 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="uri:settings" CurrentProfile="(Default)">
-  <Profiles>
-    <Profile Name="(Default)" />
-  </Profiles>
-  <Settings />
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="PC2Client.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="LocalListenerPort" Type="System.UInt16" Scope="Application">
+      <Value Profile="(Default)">42069</Value>
+    </Setting>
+    <Setting Name="RemotePostEndpoint" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://www.example.com/api/postData</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>

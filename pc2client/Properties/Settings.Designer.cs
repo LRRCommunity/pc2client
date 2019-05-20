@@ -22,5 +22,23 @@ namespace PC2Client.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("42069")]
+        public ushort LocalListenerPort {
+            get {
+                return ((ushort)(this["LocalListenerPort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://www.example.com/api/postData")]
+        public string RemotePostEndpoint {
+            get {
+                return ((string)(this["RemotePostEndpoint"]));
+            }
+        }
     }
 }
