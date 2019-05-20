@@ -52,5 +52,19 @@
             <Rectangle Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
                        VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="listenerActiveStoplight" />
         </Grid>
+        <StackPanel Margin="10,0,10,10">
+            <StackPanel Margin="0,0,0,15">
+                <Label HorizontalAlignment="Center">Local Game Instance</Label>
+                <Button x:Name="gameConnectionToggle">Connect</Button>
+            </StackPanel>
+            <StackPanel Margin="0,0,0,15">
+                <Label HorizontalAlignment="Center">Remote Database Server</Label>
+                <Button x:Name="databaseConnectionToggle">Connect</Button>
+            </StackPanel>
+            <StackPanel Margin="0,0,0,15">
+                <Label HorizontalAlignment="Center">HTTP Listener</Label>
+                <Button x:Name="httpListenerToggle">Enable</Button>
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Window>
