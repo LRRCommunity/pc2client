@@ -5,8 +5,52 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PC2Client"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="Project CARS 2 Telemetry Client" Height="384" Width="512" ResizeMode="CanMinimize">
     <Grid>
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <GroupBox Grid.Column="1" Grid.Row="1" Header="Details" Margin="5,0,5,5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="3*" />
+                </Grid.ColumnDefinitions>
+                <Label Content="Listener IP Address" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Label x:Name="IpAddressLabel" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Label Grid.Row="1" Content="Sequence Number" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Label x:Name="SequenceNumberLabel" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" />
+            </Grid>
+        </GroupBox>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Label Content="Connected to Game" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <Label Content="Connected to Server" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <Label Content="HTTP Listener Active" Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <Rectangle Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
+                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="gameConnectedStoplight" />
+            <Rectangle Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
+                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="serverConnectedStoplight" />
+            <Rectangle Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
+                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="listenerActiveStoplight" />
+        </Grid>
     </Grid>
 </Window>
