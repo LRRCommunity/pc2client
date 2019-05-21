@@ -26,10 +26,12 @@
                     <ColumnDefinition Width="2*" />
                     <ColumnDefinition Width="3*" />
                 </Grid.ColumnDefinitions>
-                <Label Content="Listener IP Address" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                <Label x:Name="IpAddressLabel" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                <Label Grid.Row="1" Content="Sequence Number" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                <Label x:Name="SequenceNumberLabel" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Label Content="Sequence Number" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Label x:Name="SequenceNumberLabel" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">0 (Not Connected)</Label>
+                <Label Grid.Row="1" Content="Updates Sent" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Label x:Name="UpdateCountLabel" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">0 (Not Connected)</Label>
+                <Label Grid.Row="2" Content="Listener IP Address" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Label x:Name="IpAddressLabel" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" />
             </Grid>
         </GroupBox>
         <Grid Grid.Row="1" Margin="5">
