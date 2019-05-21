@@ -39,6 +39,7 @@ namespace PC2Client
             this.Closed += this.OnExit;
 
             this.gameConnectionToggle.Click += GameConnectHandler.GameConnectButton_Click;
+            this.httpListenerToggle.Click += OverlayServerHandler.ListenerEnableButton_Click;
 
             this.clock = new DispatcherTimer();
             this.clock.Interval = TimeSpan.FromMilliseconds(1000);
