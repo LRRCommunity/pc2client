@@ -20,12 +20,14 @@ namespace PC2Client
     /// </summary>
     public static class GameConnectHandler
     {
+        private const int SequenceNumberOffset = 0x1C98;
         private const string SharedMemoryTag = "$pcars2$";
 
         // Game connection objects
+        private static BackgroundWorker gameConnectionWorker = null;
         private static MemoryMappedFile pCarsFile = null;
         private static MemoryMappedViewAccessor pCarsView = null;
-        private static BackgroundWorker gameConnectionWorker = null;
+        private static byte[] rawData = null;
 
         /// <summary>
         /// Gets a value indicating whether the shared memory is currently open.
@@ -90,6 +92,7 @@ namespace PC2Client
         internal static void Reset()
         {
             ReleaseMappedMemory();
+            rawData = null;
             gameConnectionWorker = null;
 
             GameConnected = false;
@@ -101,6 +104,7 @@ namespace PC2Client
                 window.gameConnectionToggle.Content = "Connect";
                 window.gameConnectionToggle.IsEnabled = true;
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
+                window.SequenceNumberLabel.Content = "0 (Not Connected)";
             }
         }
 
@@ -111,10 +115,10 @@ namespace PC2Client
         /// <param name="e">State information for processing the event.</param>
         internal static void Tick(object sender, EventArgs e)
         {
-            if ((pCarsView != null) && (!pCarsView.CanRead))
-            {
-                Reset();
-            }
+            // TODO: Check if memory-mapped file is still valid
+
+            Telemetry = ReadTelemetry();
+            ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
         }
 
         private static void BeginConnect(object sender, DoWorkEventArgs e)
@@ -135,8 +139,10 @@ namespace PC2Client
                 {
                     pCarsFile = MemoryMappedFile.OpenExisting(SharedMemoryTag, MemoryMappedFileRights.Read);
                     pCarsView = pCarsFile.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+                    rawData = new byte[pCarsView.Capacity];
+                    TelemetryData t = ReadTelemetry();
 
-                    e.Result = pCarsView;
+                    e.Result = t;
                     return;
                 }
                 catch (FileNotFoundException)
@@ -158,6 +164,7 @@ namespace PC2Client
             if (e.Error != null)
             {
                 ReleaseMappedMemory();
+                rawData = null;
 
                 window.gameConnectionToggle.Content = "Connect";
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
@@ -170,6 +177,7 @@ namespace PC2Client
             else if (e.Cancelled)
             {
                 ReleaseMappedMemory();
+                rawData = null;
 
                 window.gameConnectionToggle.Content = "Connect";
                 window.gameConnectionToggle.IsEnabled = true;
@@ -183,6 +191,9 @@ namespace PC2Client
                 if (e.Result != null)
                 {
                     // Opened successfully
+                    Telemetry = (TelemetryData)e.Result;
+                    window.SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
+
                     window.gameConnectionToggle.Content = "Disconnect";
                     window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
 
@@ -193,6 +204,7 @@ namespace PC2Client
                 {
                     // Failed to open file
                     ReleaseMappedMemory();
+                    rawData = null;
 
                     window.gameConnectionToggle.Content = "Connect";
                     window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
@@ -207,7 +219,22 @@ namespace PC2Client
 
         private static TelemetryData ReadTelemetry()
         {
-            return null;
+            uint sequenceNumberBegin, sequenceNumberEnd;
+            do
+            {
+                do
+                {
+                    sequenceNumberBegin = pCarsView.ReadUInt32(SequenceNumberOffset);
+                }
+                while (sequenceNumberBegin % 2 == 1);
+
+                pCarsView.ReadArray(0, rawData, 0, rawData.Length);
+
+                sequenceNumberEnd = BitConverter.ToUInt32(rawData, SequenceNumberOffset);
+            }
+            while (sequenceNumberBegin != sequenceNumberEnd);
+
+            return new TelemetryData(rawData);
         }
 
         private static void ReleaseMappedMemory()

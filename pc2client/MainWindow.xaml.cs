@@ -42,7 +42,7 @@ namespace PC2Client
 
             this.clock = new DispatcherTimer();
             this.clock.Interval = TimeSpan.FromMilliseconds(1000);
-            this.clock.Tick += GameConnectHandler.Tick;
+            this.clock.Tick += this.OnTick;
             this.clock.Start();
         }
 
@@ -54,6 +54,19 @@ namespace PC2Client
         public void OnExit(object sender, EventArgs e)
         {
             GameConnectHandler.Reset();
+        }
+
+        /// <summary>
+        /// Updates data on each timer tick.
+        /// </summary>
+        /// <param name="sender">The timer that triggered this event.</param>
+        /// <param name="e">State information for processing the event.</param>
+        public void OnTick(object sender, EventArgs e)
+        {
+            if (GameConnectHandler.GameConnected)
+            {
+                GameConnectHandler.Tick(sender, e);
+            }
         }
     }
 }
