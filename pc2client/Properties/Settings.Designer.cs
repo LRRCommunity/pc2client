@@ -40,5 +40,14 @@ namespace PC2Client.Properties {
                 return ((string)(this["RemotePostEndpoint"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string IpAddressOverride {
+            get {
+                return ((string)(this["IpAddressOverride"]));
+            }
+        }
     }
 }

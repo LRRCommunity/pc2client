@@ -23,7 +23,9 @@ namespace PC2Client
     public static class OverlayServerHandler
     {
         private static HttpListener listener = null;
+        private static IAsyncResult listenerResult = null;
         private static string localAddress = null;
+        private static ushort localPort = 0;
 
         /// <summary>
         /// Gets a value indicating whether the HTTP listener is active.
@@ -112,14 +114,19 @@ namespace PC2Client
                 window.listenerActiveStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
                 ListenerPending = true;
 
-                localAddress = GetLocalIpAddresses().First();
-                ushort localPort = Properties.Settings.Default.LocalListenerPort;
+                localAddress = Properties.Settings.Default.IpAddressOverride;
+                if (localAddress == string.Empty)
+                {
+                    localAddress = GetLocalIpAddresses().First();
+                }
+
+                localPort = Properties.Settings.Default.LocalListenerPort;
                 string prefix = string.Format("http://*:{0}/", localPort);
 
                 listener = new HttpListener();
                 listener.Prefixes.Add(prefix);
                 listener.Start();
-                listener.BeginGetContext(SendResponse, null);
+                listenerResult = listener.BeginGetContext(SendResponse, null);
 
                 window.httpListenerToggle.Content = "Disable";
                 window.listenerActiveStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
@@ -170,7 +177,7 @@ namespace PC2Client
                 ctx.Response.OutputStream.Close();
             }
 
-            listener.BeginGetContext(SendResponse, null);
+            listenerResult = listener.BeginGetContext(SendResponse, null);
         }
     }
 }
