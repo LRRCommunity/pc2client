@@ -97,6 +97,7 @@ namespace PC2Client
 
             GameConnected = false;
             GameConnectionPending = false;
+            Telemetry = null;
 
             MainWindow window = (MainWindow)Application.Current.MainWindow;
             if (window != null)

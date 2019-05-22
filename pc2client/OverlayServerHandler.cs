@@ -23,7 +23,6 @@ namespace PC2Client
     public static class OverlayServerHandler
     {
         private static HttpListener listener = null;
-        private static IAsyncResult listenerResult = null;
         private static string localAddress = null;
         private static ushort localPort = 0;
 
@@ -126,7 +125,7 @@ namespace PC2Client
                 listener = new HttpListener();
                 listener.Prefixes.Add(prefix);
                 listener.Start();
-                listenerResult = listener.BeginGetContext(SendResponse, null);
+                listener.BeginGetContext(SendResponse, null);
 
                 window.httpListenerToggle.Content = "Disable";
                 window.listenerActiveStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
@@ -168,14 +167,16 @@ namespace PC2Client
                         ctx.Response.StatusCode = 500;
                         ctx.Response.OutputStream.Close();
                     }
+                    else
+                    {
+                        ctx.Response.ContentEncoding = Encoding.UTF8;
+                        ctx.Response.ContentType = "application/json";
 
-                    ctx.Response.ContentEncoding = Encoding.UTF8;
-                    ctx.Response.ContentType = "application/json";
-
-                    StreamWriter s = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8);
-                    JsonSerializer jsonCodec = new JsonSerializer();
-                    jsonCodec.Serialize(s, telemetry);
-                    s.Close();
+                        StreamWriter s = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8);
+                        JsonSerializer jsonCodec = new JsonSerializer();
+                        jsonCodec.Serialize(s, telemetry);
+                        s.Close();
+                    }
                 }
                 else
                 {
@@ -183,7 +184,7 @@ namespace PC2Client
                     ctx.Response.OutputStream.Close();
                 }
 
-                listenerResult = listener.BeginGetContext(SendResponse, null);
+                listener.BeginGetContext(SendResponse, null);
             }
             catch (ObjectDisposedException)
             {
