@@ -137,9 +137,13 @@ namespace PC2Client
             else if (ListenerEnabled && (!ListenerPending))
             {
                 // Disable
-                listener.Stop();
                 listener.Close();
-                listener = null;
+
+                window.httpListenerToggle.Content = "Enable";
+                window.listenerActiveStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
+                window.IpAddressLabel.Content = "(Not Enabled)";
+                ListenerPending = false;
+                ListenerEnabled = false;
             }
             else if ((!ListenerEnabled) && ListenerPending)
             {
@@ -153,31 +157,38 @@ namespace PC2Client
 
         private static void SendResponse(IAsyncResult state)
         {
-            HttpListenerContext ctx = listener.EndGetContext(state);
-            if (ctx.Request.RawUrl.Equals("/"))
+            try
             {
-                LibPCars2.SharedMemory.TelemetryData telemetry = GameConnectHandler.Telemetry;
-                if (telemetry == null)
+                HttpListenerContext ctx = listener.EndGetContext(state);
+                if (ctx.Request.RawUrl.Equals("/"))
                 {
-                    ctx.Response.StatusCode = 500;
+                    LibPCars2.SharedMemory.TelemetryData telemetry = GameConnectHandler.Telemetry;
+                    if (telemetry == null)
+                    {
+                        ctx.Response.StatusCode = 500;
+                        ctx.Response.OutputStream.Close();
+                    }
+
+                    ctx.Response.ContentEncoding = Encoding.UTF8;
+                    ctx.Response.ContentType = "application/json";
+
+                    StreamWriter s = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8);
+                    JsonSerializer jsonCodec = new JsonSerializer();
+                    jsonCodec.Serialize(s, telemetry);
+                    s.Close();
+                }
+                else
+                {
+                    ctx.Response.StatusCode = 404;
                     ctx.Response.OutputStream.Close();
                 }
 
-                ctx.Response.ContentEncoding = Encoding.UTF8;
-                ctx.Response.ContentType = "application/json";
-
-                StreamWriter s = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8);
-                JsonSerializer jsonCodec = new JsonSerializer();
-                jsonCodec.Serialize(s, telemetry);
-                s.Close();
+                listenerResult = listener.BeginGetContext(SendResponse, null);
             }
-            else
+            catch (ObjectDisposedException)
             {
-                ctx.Response.StatusCode = 404;
-                ctx.Response.OutputStream.Close();
+                listener = null;
             }
-
-            listenerResult = listener.BeginGetContext(SendResponse, null);
         }
     }
 }
