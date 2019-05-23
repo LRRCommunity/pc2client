@@ -38,6 +38,9 @@
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>SA0001</NoWarn>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>car.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="libpcars2">
       <HintPath>..\libpcars2.dll</HintPath>
@@ -119,6 +122,9 @@
   <ItemGroup>
     <Analyzer Include="..\packages\StyleCop.Analyzers.1.1.118\analyzers\dotnet\cs\StyleCop.Analyzers.CodeFixes.dll" />
     <Analyzer Include="..\packages\StyleCop.Analyzers.1.1.118\analyzers\dotnet\cs\StyleCop.Analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="car.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -116,8 +116,6 @@ namespace PC2Client
         /// <param name="e">State information for processing the event.</param>
         internal static void Tick(object sender, EventArgs e)
         {
-            // TODO: Check if memory-mapped file is still valid
-
             Telemetry = ReadTelemetry();
             ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
         }
