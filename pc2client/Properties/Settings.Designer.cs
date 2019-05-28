@@ -49,5 +49,29 @@ namespace PC2Client.Properties {
                 return ((string)(this["IpAddressOverride"]));
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ApiUsername {
+            get {
+                return ((string)(this["ApiUsername"]));
+            }
+            set {
+                this["ApiUsername"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ApiPassword {
+            get {
+                return ((string)(this["ApiPassword"]));
+            }
+            set {
+                this["ApiPassword"] = value;
+            }
+        }
     }
 }
