@@ -10,7 +10,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using Newtonsoft.Json;
@@ -172,7 +171,7 @@ namespace PC2Client
                         ctx.Response.ContentEncoding = Encoding.UTF8;
                         ctx.Response.ContentType = "application/json";
 
-                        StreamWriter s = new StreamWriter(ctx.Response.OutputStream, Encoding.UTF8);
+                        StreamWriter s = new StreamWriter(ctx.Response.OutputStream, new UTF8Encoding(false));
                         JsonSerializer jsonCodec = new JsonSerializer();
                         jsonCodec.Serialize(s, telemetry);
                         s.Close();
