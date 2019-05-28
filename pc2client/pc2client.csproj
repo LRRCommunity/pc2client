@@ -79,6 +79,10 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DataTransfer\DatabaseExport.cs" />
+    <Compile Include="DataTransfer\DatabaseExportImpl.cs" />
+    <Compile Include="DataTransfer\OverlayExport.cs" />
+    <Compile Include="DataTransfer\OverlayExportImpl.cs" />
     <Compile Include="GameConnectHandler.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
