@@ -168,12 +168,14 @@ namespace PC2Client
                     }
                     else
                     {
+                        DataTransfer.OverlayExport jsonOutput = new DataTransfer.OverlayExport(telemetry);
+
                         ctx.Response.ContentEncoding = Encoding.UTF8;
                         ctx.Response.ContentType = "application/json";
 
                         StreamWriter s = new StreamWriter(ctx.Response.OutputStream, new UTF8Encoding(false));
                         JsonSerializer jsonCodec = new JsonSerializer();
-                        jsonCodec.Serialize(s, telemetry);
+                        jsonCodec.Serialize(s, jsonOutput);
                         s.Close();
                     }
                 }
