@@ -100,6 +100,7 @@ namespace PC2Client
             gameConnectionWorker = null;
 
             gameIsAlive = false;
+            lastSequenceNumber = 0;
             GameConnected = false;
             GameConnectionPending = false;
             Telemetry = null;
@@ -165,7 +166,7 @@ namespace PC2Client
                     pCarsFile = MemoryMappedFile.OpenExisting(SharedMemoryTag, MemoryMappedFileRights.Read);
                     pCarsView = pCarsFile.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
                     rawData = new byte[pCarsView.Capacity];
-                    TelemetryData t = ReadTelemetry();
+                    TelemetryData t = ReadTelemetry(true);
 
                     e.Result = t;
                     return;
