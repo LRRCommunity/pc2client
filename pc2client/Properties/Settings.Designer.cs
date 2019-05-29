@@ -34,7 +34,7 @@ namespace PC2Client.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://www.example.com/api/postData")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://www.cheetojack.com/api/pc2data/")]
         public string RemotePostEndpoint {
             get {
                 return ((string)(this["RemotePostEndpoint"]));

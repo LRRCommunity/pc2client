@@ -6,7 +6,7 @@
       <Value Profile="(Default)">42069</Value>
     </Setting>
     <Setting Name="RemotePostEndpoint" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">https://www.example.com/api/postData</Value>
+      <Value Profile="(Default)">http://www.cheetojack.com/api/pc2data/</Value>
     </Setting>
     <Setting Name="IpAddressOverride" Type="System.String" Scope="Application">
       <Value Profile="(Default)" />
