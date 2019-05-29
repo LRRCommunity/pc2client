@@ -4,8 +4,10 @@
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,6 +27,8 @@ namespace PC2Client
 
         // Game connection objects
         private static BackgroundWorker gameConnectionWorker = null;
+        private static bool gameIsAlive = false;
+        private static uint lastSequenceNumber = 0;
         private static MemoryMappedFile pCarsFile = null;
         private static MemoryMappedViewAccessor pCarsView = null;
         private static byte[] rawData = null;
@@ -95,6 +99,7 @@ namespace PC2Client
             rawData = null;
             gameConnectionWorker = null;
 
+            gameIsAlive = false;
             GameConnected = false;
             GameConnectionPending = false;
             Telemetry = null;
@@ -116,8 +121,29 @@ namespace PC2Client
         /// <param name="e">State information for processing the event.</param>
         internal static void Tick(object sender, EventArgs e)
         {
-            Telemetry = ReadTelemetry();
-            ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
+            if (gameIsAlive)
+            {
+                Telemetry = ReadTelemetry();
+                if (Telemetry != null)
+                {
+                    ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
+                }
+            }
+            else
+            {
+                int processCount = Process.GetProcesses().Count(p => p.ProcessName.StartsWith("pcars2", true, null));
+                if (processCount > 0)
+                {
+                    TelemetryData t = ReadTelemetry(true);
+                    if (t != null && t.SequenceNumber == 0)
+                    {
+                        gameIsAlive = true;
+                        Telemetry = t;
+                        ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
+                        ((MainWindow)Application.Current.MainWindow).gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
+                    }
+                }
+            }
         }
 
         private static void BeginConnect(object sender, DoWorkEventArgs e)
@@ -190,6 +216,7 @@ namespace PC2Client
                 if (e.Result != null)
                 {
                     // Opened successfully
+                    gameIsAlive = true;
                     Telemetry = (TelemetryData)e.Result;
                     window.SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
 
@@ -216,22 +243,68 @@ namespace PC2Client
             gameConnectionWorker = null;
         }
 
-        private static TelemetryData ReadTelemetry()
+        private static uint? ReadRawData(int attempts = 5)
         {
-            uint sequenceNumberBegin, sequenceNumberEnd;
+            int i = attempts;
+            uint sequenceNumberBegin, sequenceNumberEnd = 0;
             do
             {
+                int j = attempts;
                 do
                 {
                     sequenceNumberBegin = pCarsView.ReadUInt32(SequenceNumberOffset);
                 }
-                while (sequenceNumberBegin % 2 == 1);
+                while ((sequenceNumberBegin % 2 == 1) && (--j > 0));
+
+                if (j == 0)
+                {
+                    continue;
+                }
 
                 pCarsView.ReadArray(0, rawData, 0, rawData.Length);
 
                 sequenceNumberEnd = BitConverter.ToUInt32(rawData, SequenceNumberOffset);
             }
-            while (sequenceNumberBegin != sequenceNumberEnd);
+            while ((sequenceNumberBegin != sequenceNumberEnd) && (--i > 0));
+
+            if (i == 0)
+            {
+                return null;
+            }
+            else
+            {
+                return sequenceNumberEnd;
+            }
+        }
+
+        private static TelemetryData ReadTelemetry(bool force = false)
+        {
+            uint? sequenceNumberEnd = ReadRawData();
+            if (sequenceNumberEnd == null)
+            {
+                return Telemetry;
+            }
+
+            if (force)
+            {
+                return new TelemetryData(rawData);
+            }
+
+            if (sequenceNumberEnd > 0 && sequenceNumberEnd == lastSequenceNumber)
+            {
+                int processCount = Process.GetProcesses().Count(p => p.ProcessName.StartsWith("pcars2", true, null));
+                if (processCount == 0)
+                {
+                    // Game crashed, clean up the mess
+                    gameIsAlive = false;
+                    ((MainWindow)Application.Current.MainWindow).gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
+                    return null;
+                }
+            }
+            else
+            {
+                lastSequenceNumber = sequenceNumberEnd.GetValueOrDefault();
+            }
 
             return new TelemetryData(rawData);
         }

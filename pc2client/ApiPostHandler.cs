@@ -14,6 +14,7 @@ using System.Windows;
 
 using LibPCars2.SharedMemory;
 using Newtonsoft.Json;
+using System.Windows.Media;
 
 namespace PC2Client
 {
@@ -48,6 +49,20 @@ namespace PC2Client
             {
                 // Enable
                 client = new HttpClient();
+                if (!string.IsNullOrEmpty(Properties.Settings.Default.ApiUsername))
+                {
+                    string credentialString = string.Format("{0}:{1}", Properties.Settings.Default.ApiUsername, Properties.Settings.Default.ApiPassword);
+                    string encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentialString));
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encodedCredentials);
+                }
+
+                updatesSent = 0;
+
+                window.UpdateCountLabel.Content = updatesSent.ToString();
+                window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
+                window.databaseConnectionToggle.Content = "Disconnect";
+
+                SenderEnabled = true;
             }
             else if (SenderEnabled && (!SenderPending))
             {
@@ -55,6 +70,12 @@ namespace PC2Client
                 client.CancelPendingRequests();
                 client.Dispose();
                 client = null;
+
+                SenderEnabled = false;
+
+                window.UpdateCountLabel.Content = "0 (Not Connected)";
+                window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
+                window.databaseConnectionToggle.Content = "Connect";
             }
             else
             {
@@ -70,7 +91,7 @@ namespace PC2Client
         internal static async void Tick(object sender, EventArgs e)
         {
             TelemetryData telemetry = GameConnectHandler.Telemetry;
-            if (telemetry == null)
+            if (telemetry == null || client == null)
             {
                 return;
             }
@@ -91,19 +112,24 @@ namespace PC2Client
             HttpContent content = new StreamContent(outStream);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-            if (!string.IsNullOrEmpty(Properties.Settings.Default.ApiUsername))
+            MainWindow window = (MainWindow)Application.Current.MainWindow;
+            try
             {
-                string credentialString = string.Format("{0}:{1}", Properties.Settings.Default.ApiUsername, Properties.Settings.Default.ApiPassword);
-                string encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentialString));
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encodedCredentials);
+                HttpResponseMessage response = await client.PostAsync(Properties.Settings.Default.RemotePostEndpoint, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    ++updatesSent;
+                    window.UpdateCountLabel.Content = updatesSent.ToString();
+                    window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
+                }
+                else
+                {
+                    window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
+                }
             }
-
-            HttpResponseMessage response = await client.PostAsync(Properties.Settings.Default.RemotePostEndpoint, content);
-            if (response.IsSuccessStatusCode)
+            catch (HttpRequestException)
             {
-                ++updatesSent;
-                MainWindow window = (MainWindow)Application.Current.MainWindow;
-                window.UpdateCountLabel.Content = updatesSent.ToString();
+                window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
             }
         }
     }

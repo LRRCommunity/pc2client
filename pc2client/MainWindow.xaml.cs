@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -40,6 +38,7 @@ namespace PC2Client
 
             this.gameConnectionToggle.Click += GameConnectHandler.GameConnectButton_Click;
             this.httpListenerToggle.Click += OverlayServerHandler.ListenerEnableButton_Click;
+            this.databaseConnectionToggle.Click += ApiPostHandler.SenderEnableButton_Click;
 
             this.clock = new DispatcherTimer();
             this.clock.Interval = TimeSpan.FromMilliseconds(1000);
@@ -67,6 +66,11 @@ namespace PC2Client
             if (GameConnectHandler.GameConnected)
             {
                 GameConnectHandler.Tick(sender, e);
+
+                if (ApiPostHandler.SenderEnabled)
+                {
+                    ApiPostHandler.Tick(sender, e);
+                }
             }
         }
     }
