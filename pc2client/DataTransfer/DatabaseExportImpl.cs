@@ -23,6 +23,9 @@ namespace PC2Client.DataTransfer
         {
             this.Timestamp = DateTime.Now;
 
+            string username = Properties.Settings.Default.ApiUsername;
+            this.SourceUser = string.IsNullOrWhiteSpace(username) ? "anonymous" : username;
+
             Type myType = this.GetType();
             var myProps = myType.GetProperties();
 

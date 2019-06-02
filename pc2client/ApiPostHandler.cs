@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 
@@ -46,7 +47,7 @@ namespace PC2Client
             {
                 // Enable
                 client = new HttpClient();
-                if (!string.IsNullOrEmpty(Properties.Settings.Default.ApiUsername))
+                if (!string.IsNullOrWhiteSpace(Properties.Settings.Default.ApiUsername))
                 {
                     string credentialString = string.Format("{0}:{1}", Properties.Settings.Default.ApiUsername, Properties.Settings.Default.ApiPassword);
                     string encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentialString));
@@ -127,6 +128,9 @@ namespace PC2Client
             catch (HttpRequestException)
             {
                 window.serverConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
+            }
+            catch (TaskCanceledException)
+            {
             }
         }
     }
