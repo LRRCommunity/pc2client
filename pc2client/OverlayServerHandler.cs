@@ -9,9 +9,11 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Text;
 using System.Windows;
 using System.Windows.Media;
+
 using Newtonsoft.Json;
 
 namespace PC2Client
@@ -24,6 +26,23 @@ namespace PC2Client
         private static HttpListener listener = null;
         private static string localAddress = null;
         private static ushort localPort = 0;
+
+        private static Vector2 lastPosition;
+        private static Vector2 lastOrientation;
+        private static Matrix3x2 worldTransform;
+
+        static OverlayServerHandler()
+        {
+            lastPosition = new Vector2(-762.9216f, 1169.4017f);
+            lastOrientation = new Vector2(0.9988f, 0.0477f);
+
+            float scaleFactor = 1.0f / 6.63f;
+            worldTransform = Matrix3x2.Identity
+                * Matrix3x2.CreateScale(1, -1)
+                * Matrix3x2.CreateTranslation(762.9216f, 1169.4017f)
+                * Matrix3x2.CreateScale(scaleFactor)
+                * Matrix3x2.CreateTranslation(5.86f, 212.598f);
+        }
 
         /// <summary>
         /// Gets a value indicating whether the HTTP listener is active.
@@ -178,6 +197,50 @@ namespace PC2Client
                         jsonCodec.Serialize(s, jsonOutput);
                         s.Close();
                     }
+                }
+                else if (ctx.Request.RawUrl.Equals("/carPosition"))
+                {
+                    LibPCars2.SharedMemory.TelemetryData telemetry = GameConnectHandler.Telemetry;
+                    if (telemetry != null && telemetry.ViewedParticipantIndex != -1)
+                    {
+                        LibPCars2.SharedMemory.ParticipantInfo p = telemetry.Participants[telemetry.ViewedParticipantIndex];
+                        LibPCars2.SharedMemory.ParticipantInfoEx pEx = telemetry.ParticipantsEx[telemetry.ViewedParticipantIndex];
+
+                        lastPosition = new Vector2(p.WorldPosition.X, p.WorldPosition.Z);
+                        lastOrientation = new Vector2(pEx.Orientation.X, pEx.Orientation.Z);
+                    }
+
+                    Vector2 position = Vector2.Transform(lastPosition, worldTransform);
+                    Vector2 orientation = Vector2.Normalize(lastOrientation);
+                    float cosine = orientation.X;
+                    float sine = orientation.Y;
+                    Matrix3x2 totalTransform = new Matrix3x2(cosine, sine, -sine, cosine, 0, 0) * Matrix3x2.CreateTranslation(position);
+
+                    ctx.Response.ContentEncoding = Encoding.UTF8;
+                    ctx.Response.ContentType = "application/json";
+
+                    StreamWriter s = new StreamWriter(ctx.Response.OutputStream, new UTF8Encoding(false));
+                    JsonSerializer jsonCodec = new JsonSerializer();
+                    jsonCodec.Serialize(s, new
+                    {
+                        position = position,
+                        orientation = orientation,
+                        degreeAngle = Math.Atan2(orientation.Y, orientation.X) * 180.0 / Math.PI,
+                        transformMatrix = totalTransform,
+                    });
+                    s.Close();
+                }
+                else if (ctx.Request.RawUrl.Equals("/map"))
+                {
+                    ctx.Response.ContentEncoding = Encoding.UTF8;
+                    ctx.Response.ContentType = "text/html";
+
+                    using (FileStream workFile = new FileStream("Resources/mapOverlay.html", FileMode.Open, FileAccess.Read))
+                    {
+                        workFile.CopyTo(ctx.Response.OutputStream);
+                    }
+
+                    ctx.Response.OutputStream.Close();
                 }
                 else
                 {
