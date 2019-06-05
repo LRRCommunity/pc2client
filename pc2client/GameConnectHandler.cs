@@ -8,12 +8,14 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
 using LibPCars2.SharedMemory;
+using LiteDB;
 
 namespace PC2Client
 {
@@ -32,6 +34,7 @@ namespace PC2Client
         private static MemoryMappedFile pCarsFile = null;
         private static MemoryMappedViewAccessor pCarsView = null;
         private static byte[] rawData = null;
+        private static LiteDatabase logDatabase = null;
 
         /// <summary>
         /// Gets a value indicating whether the shared memory is currently open.
@@ -63,6 +66,8 @@ namespace PC2Client
                 window.gameConnectionToggle.Content = "Cancel";
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
                 GameConnectionPending = true;
+
+                InitializeDatabase();
 
                 gameConnectionWorker = new BackgroundWorker();
                 gameConnectionWorker.WorkerSupportsCancellation = true;
@@ -104,6 +109,12 @@ namespace PC2Client
             GameConnected = false;
             GameConnectionPending = false;
             Telemetry = null;
+
+            if (logDatabase != null)
+            {
+                logDatabase.Dispose();
+                logDatabase = null;
+            }
 
             MainWindow window = (MainWindow)Application.Current.MainWindow;
             if (window != null)
@@ -192,6 +203,12 @@ namespace PC2Client
                 ReleaseMappedMemory();
                 rawData = null;
 
+                if (logDatabase != null)
+                {
+                    logDatabase.Dispose();
+                    logDatabase = null;
+                }
+
                 window.gameConnectionToggle.Content = "Connect";
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
 
@@ -204,6 +221,12 @@ namespace PC2Client
             {
                 ReleaseMappedMemory();
                 rawData = null;
+
+                if (logDatabase != null)
+                {
+                    logDatabase.Dispose();
+                    logDatabase = null;
+                }
 
                 window.gameConnectionToggle.Content = "Connect";
                 window.gameConnectionToggle.IsEnabled = true;
@@ -233,6 +256,12 @@ namespace PC2Client
                     ReleaseMappedMemory();
                     rawData = null;
 
+                    if (logDatabase != null)
+                    {
+                        logDatabase.Dispose();
+                        logDatabase = null;
+                    }
+
                     window.gameConnectionToggle.Content = "Connect";
                     window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
 
@@ -242,6 +271,22 @@ namespace PC2Client
             }
 
             gameConnectionWorker = null;
+        }
+
+        private static void InitializeDatabase()
+        {
+            string userName = Properties.Settings.Default.ApiUsername;
+            string fileName = "./ProjectCARS.ldb";
+
+            if (!string.IsNullOrWhiteSpace(userName))
+            {
+                fileName = string.Format("./{0}.ProjectCARS.ldb", userName);
+            }
+
+            logDatabase = new LiteDatabase(fileName);
+            logDatabase.Log.Logging += WriteDatabaseLog;
+            logDatabase.Log.Level = Logger.ERROR | Logger.RECOVERY;
+            logDatabase.GetCollection<TelemetryData>("telemetryLog").EnsureIndex(t => t.SequenceNumber);
         }
 
         private static uint? ReadRawData(int attempts = 5)
@@ -286,9 +331,13 @@ namespace PC2Client
                 return Telemetry;
             }
 
+            TelemetryData tData = null;
+
             if (force)
             {
-                return new TelemetryData(rawData);
+                tData = new TelemetryData(rawData);
+                logDatabase.GetCollection<TelemetryData>("telemetryLog").Insert(DateTime.Now, tData);
+                return tData;
             }
 
             if (sequenceNumberEnd > 0 && sequenceNumberEnd == lastSequenceNumber)
@@ -304,10 +353,12 @@ namespace PC2Client
             }
             else
             {
-                lastSequenceNumber = sequenceNumberEnd.GetValueOrDefault();
+                lastSequenceNumber = sequenceNumberEnd.Value;
             }
 
-            return new TelemetryData(rawData);
+            tData = new TelemetryData(rawData);
+            logDatabase.GetCollection<TelemetryData>("telemetryLog").Insert(DateTime.Now, tData);
+            return tData;
         }
 
         private static void ReleaseMappedMemory()
@@ -322,6 +373,14 @@ namespace PC2Client
             {
                 pCarsFile.Dispose();
                 pCarsFile = null;
+            }
+        }
+
+        private static void WriteDatabaseLog(string logEntry)
+        {
+            using (var logFile = new StreamWriter("./ProjectCARS.LiteDB.log", true, new UTF8Encoding(false)))
+            {
+                logFile.WriteLine(logEntry);
             }
         }
     }
