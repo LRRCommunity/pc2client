@@ -26,6 +26,8 @@ namespace PC2Client.DataTransfer
             string username = Properties.Settings.Default.ApiUsername;
             this.SourceUser = string.IsNullOrWhiteSpace(username) ? "anonymous" : username;
 
+            this.ReturnData = OverlayServerHandler.ReturnData;
+
             Type myType = this.GetType();
             var myProps = myType.GetProperties();
 

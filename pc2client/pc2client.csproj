@@ -87,6 +87,7 @@
     <Compile Include="DataTransfer\DatabaseExportImpl.cs" />
     <Compile Include="DataTransfer\OverlayExport.cs" />
     <Compile Include="DataTransfer\OverlayExportImpl.cs" />
+    <Compile Include="DataTransfer\ReturnData.cs" />
     <Compile Include="GameConnectHandler.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>

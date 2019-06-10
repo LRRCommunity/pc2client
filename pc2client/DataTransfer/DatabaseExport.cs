@@ -18,6 +18,7 @@ namespace PC2Client.DataTransfer
 #pragma warning disable SA1600
         public DateTime Timestamp { get; }
         public string SourceUser { get; }
+        public ReturnData ReturnData { get; }
 
         public GameState GameState { get; private set; }
         public SessionState SessionState { get; private set; }

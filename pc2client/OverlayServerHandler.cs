@@ -36,6 +36,9 @@ namespace PC2Client
             lastPosition = new Vector2(-762.9216f, 1169.4017f);
             lastOrientation = new Vector2(0.9988f, 0.0477f);
 
+            ReturnData = new DataTransfer.ReturnData();
+            ReturnData.DriverName = "Ian";
+
             float scaleFactor = 1.0f / 6.63f;
             worldTransform = Matrix3x2.Identity
                 * Matrix3x2.CreateScale(1, -1)
@@ -43,6 +46,11 @@ namespace PC2Client
                 * Matrix3x2.CreateScale(scaleFactor)
                 * Matrix3x2.CreateTranslation(5.86f, 212.598f);
         }
+
+        /// <summary>
+        /// Gets the collection of data to send upstream.
+        /// </summary>
+        internal static DataTransfer.ReturnData ReturnData { get; }
 
         /// <summary>
         /// Gets a value indicating whether the HTTP listener is active.
@@ -177,7 +185,7 @@ namespace PC2Client
             try
             {
                 HttpListenerContext ctx = listener.EndGetContext(state);
-                if (ctx.Request.RawUrl.Equals("/"))
+                if (ctx.Request.Url.AbsolutePath.Equals("/"))
                 {
                     LibPCars2.SharedMemory.TelemetryData telemetry = GameConnectHandler.Telemetry;
                     if (telemetry == null)
@@ -198,7 +206,7 @@ namespace PC2Client
                         s.Close();
                     }
                 }
-                else if (ctx.Request.RawUrl.Equals("/carPosition"))
+                else if (ctx.Request.Url.AbsolutePath.Equals("/carPosition"))
                 {
                     LibPCars2.SharedMemory.TelemetryData telemetry = GameConnectHandler.Telemetry;
                     if (telemetry != null && telemetry.ViewedParticipantIndex != -1)
@@ -230,7 +238,7 @@ namespace PC2Client
                     });
                     s.Close();
                 }
-                else if (ctx.Request.RawUrl.Equals("/map"))
+                else if (ctx.Request.Url.AbsolutePath.Equals("/map"))
                 {
                     ctx.Response.ContentEncoding = Encoding.UTF8;
                     ctx.Response.ContentType = "text/html";
@@ -238,6 +246,22 @@ namespace PC2Client
                     using (FileStream workFile = new FileStream("Resources/mapOverlay.html", FileMode.Open, FileAccess.Read))
                     {
                         workFile.CopyTo(ctx.Response.OutputStream);
+                    }
+
+                    ctx.Response.OutputStream.Close();
+                }
+                else if (ctx.Request.Url.AbsolutePath.Equals("/update"))
+                {
+                    ctx.Response.StatusCode = 200;
+
+                    string name = ctx.Request.QueryString["driver"];
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        ReturnData.DriverName = name;
+                    }
+                    else
+                    {
+                        ctx.Response.StatusCode = 400;
                     }
 
                     ctx.Response.OutputStream.Close();
