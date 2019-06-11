@@ -6,6 +6,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
@@ -194,6 +195,23 @@ namespace PC2Client
             }
         }
 
+        private static byte[] CompressBinary(byte[] data)
+        {
+            using (MemoryStream mem = new MemoryStream())
+            {
+                using (GZipStream compressor = new GZipStream(mem, CompressionLevel.Fastest, true))
+                {
+                    compressor.Write(data, 0, data.Length);
+                }
+
+                mem.Seek(0, SeekOrigin.Begin);
+
+                byte[] compressedData = new byte[mem.Length];
+                mem.Read(compressedData, 0, compressedData.Length);
+                return compressedData;
+            }
+        }
+
         private static void FinishConnect(object sender, RunWorkerCompletedEventArgs e)
         {
             MainWindow window = (MainWindow)Application.Current.MainWindow;
@@ -286,7 +304,7 @@ namespace PC2Client
             logDatabase = new LiteDatabase(fileName);
             logDatabase.Log.Logging += WriteDatabaseLog;
             logDatabase.Log.Level = Logger.ERROR | Logger.RECOVERY;
-            logDatabase.GetCollection<TelemetryData>("telemetryLog").EnsureIndex(t => t.SequenceNumber);
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("telemetryLog").EnsureIndex(t => t.Timestamp);
         }
 
         private static uint? ReadRawData(int attempts = 5)
@@ -331,12 +349,18 @@ namespace PC2Client
                 return Telemetry;
             }
 
+            byte[] compressedTelemetry = CompressBinary(rawData);
+            DataTransfer.LocalDbEntry dbEntry = new DataTransfer.LocalDbEntry();
+            dbEntry.Timestamp = DateTime.Now;
+            dbEntry.Driver = OverlayServerHandler.ReturnData.DriverName;
+            dbEntry.CompressedTelemetry = compressedTelemetry;
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("telemetryLog").Insert(dbEntry);
+
             TelemetryData tData = null;
 
             if (force)
             {
                 tData = new TelemetryData(rawData);
-                logDatabase.GetCollection<TelemetryData>("telemetryLog").Insert(DateTime.Now, tData);
                 return tData;
             }
 
@@ -357,7 +381,6 @@ namespace PC2Client
             }
 
             tData = new TelemetryData(rawData);
-            logDatabase.GetCollection<TelemetryData>("telemetryLog").Insert(DateTime.Now, tData);
             return tData;
         }
 

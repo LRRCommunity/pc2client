@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="DataTransfer\DatabaseExport.cs" />
     <Compile Include="DataTransfer\DatabaseExportImpl.cs" />
+    <Compile Include="DataTransfer\LocalDbEntry.cs" />
     <Compile Include="DataTransfer\OverlayExport.cs" />
     <Compile Include="DataTransfer\OverlayExportImpl.cs" />
     <Compile Include="DataTransfer\ReturnData.cs" />
