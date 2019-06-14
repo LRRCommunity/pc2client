@@ -28,13 +28,13 @@ namespace PC2Client
         private static ushort localPort = 0;
 
         private static Vector2 lastPosition;
-        private static Vector2 lastOrientation;
+        private static Vector3 lastOrientation;
         private static Matrix3x2 worldTransform;
 
         static OverlayServerHandler()
         {
             lastPosition = new Vector2(-762.9216f, 1169.4017f);
-            lastOrientation = new Vector2(0.9988f, 0.0477f);
+            lastOrientation = new Vector3(0, -3.09387f, 0);
 
             ReturnData = new DataTransfer.ReturnData();
             ReturnData.DriverName = "Ian";
@@ -180,6 +180,15 @@ namespace PC2Client
             }
         }
 
+        private static Matrix4x4 GenerateRotation(float rx, float ry, float rz)
+        {
+            Matrix4x4 mtx = Matrix4x4.Identity;
+            mtx *= Matrix4x4.CreateRotationZ(rz);
+            mtx *= Matrix4x4.CreateRotationY(ry);
+            mtx *= Matrix4x4.CreateRotationX(rx);
+            return mtx;
+        }
+
         private static void SendResponse(IAsyncResult state)
         {
             try
@@ -215,14 +224,17 @@ namespace PC2Client
                         LibPCars2.SharedMemory.ParticipantInfoEx pEx = telemetry.ParticipantsEx[telemetry.ViewedParticipantIndex];
 
                         lastPosition = new Vector2(p.WorldPosition.X, p.WorldPosition.Z);
-                        lastOrientation = new Vector2(pEx.Orientation.X, pEx.Orientation.Z);
+                        lastOrientation = new Vector3(pEx.Orientation.X, pEx.Orientation.Y, pEx.Orientation.Z);
                     }
 
                     Vector2 position = Vector2.Transform(lastPosition, worldTransform);
-                    Vector2 orientation = Vector2.Normalize(lastOrientation);
-                    float cosine = orientation.X;
-                    float sine = orientation.Y;
-                    Matrix3x2 totalTransform = new Matrix3x2(cosine, sine, -sine, cosine, 0, 0) * Matrix3x2.CreateTranslation(position);
+                    Matrix4x4 rotation = GenerateRotation(lastOrientation.X, lastOrientation.Y, lastOrientation.Z);
+                    Vector3 forwardX = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
+                    Vector3 forwardZ = Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
+
+                    float rCos = (forwardX.X + forwardZ.Z) / 2;
+                    float rSin = (forwardX.Z - forwardZ.X) / 2;
+                    Matrix3x2 totalTransform = new Matrix3x2(-rCos, rSin, -rSin, -rCos, 0, 0) * Matrix3x2.CreateTranslation(position);
 
                     ctx.Response.ContentEncoding = Encoding.UTF8;
                     ctx.Response.ContentType = "application/json";
@@ -231,9 +243,7 @@ namespace PC2Client
                     JsonSerializer jsonCodec = new JsonSerializer();
                     jsonCodec.Serialize(s, new
                     {
-                        position = position,
-                        orientation = orientation,
-                        degreeAngle = Math.Atan2(orientation.Y, orientation.X) * 180.0 / Math.PI,
+                        position,
                         transformMatrix = totalTransform,
                     });
                     s.Close();
