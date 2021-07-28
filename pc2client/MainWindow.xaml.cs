@@ -37,13 +37,13 @@ namespace PC2Client
             this.Closed += this.OnExit;
 
             this.gameConnectionToggle.Click += GameConnectHandler.GameConnectButton_Click;
-            this.httpListenerToggle.Click += OverlayServerHandler.ListenerEnableButton_Click;
-            this.databaseConnectionToggle.Click += ApiPostHandler.SenderEnableButton_Click;
+            // this.httpListenerToggle.Click += OverlayServerHandler.ListenerEnableButton_Click;
+            // this.databaseConnectionToggle.Click += ApiPostHandler.SenderEnableButton_Click;
 
             this.clock = new DispatcherTimer();
             this.clock.Interval = TimeSpan.FromMilliseconds(1000);
             this.clock.Tick += this.OnTick;
-            this.clock.Start();
+            // this.clock.Start();
         }
 
         /// <summary>
@@ -65,12 +65,12 @@ namespace PC2Client
         {
             if (GameConnectHandler.GameConnected)
             {
-                GameConnectHandler.Tick(sender, e);
+                // GameConnectHandler.Tick(sender, e);
 
-                if (ApiPostHandler.SenderEnabled)
-                {
-                    ApiPostHandler.Tick(sender, e);
-                }
+                //if (ApiPostHandler.SenderEnabled)
+                //{
+                    //ApiPostHandler.Tick(sender, e);
+                //}
             }
         }
     }

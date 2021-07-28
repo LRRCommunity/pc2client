@@ -146,7 +146,7 @@ namespace PC2Client
                 }
 
                 localPort = Properties.Settings.Default.LocalListenerPort;
-                string prefix = string.Format("http://*:{0}/", localPort);
+                string prefix = string.Format("http://localhost:{0}/", localPort);
 
                 listener = new HttpListener();
                 listener.Prefixes.Add(prefix);

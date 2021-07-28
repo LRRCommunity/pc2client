@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Project CARS 2 Telemetry Client" Height="384" Width="512" ResizeMode="CanMinimize">
+        Title="Assetto Corsa Telemetry Client" Height="384" Width="512" ResizeMode="CanMinimize">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -14,7 +14,7 @@
             <RowDefinition Height="2*" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <GroupBox Grid.Column="1" Grid.Row="1" Header="Details" Margin="5,0,5,5">
+        <GroupBox Grid.Column="1" Grid.Row="1" Header="Details" Margin="5,0,5,5" IsEnabled="False">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
@@ -44,14 +44,14 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
             <Label Content="Connected to Game" HorizontalAlignment="Right" VerticalAlignment="Center" />
-            <Label Content="Connected to Server" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" />
-            <Label Content="HTTP Listener Active" Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <Label Content="Connected to Server" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" IsEnabled="False" />
+            <Label Content="HTTP Listener Active" Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Center" IsEnabled="False" />
             <Rectangle Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
                        VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="gameConnectedStoplight" />
             <Rectangle Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
-                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="serverConnectedStoplight" />
+                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="serverConnectedStoplight" IsEnabled="False" />
             <Rectangle Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Height="15" Stroke="Black"
-                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="listenerActiveStoplight" />
+                       VerticalAlignment="Center" Width="15" Fill="{StaticResource redStoplight}" x:Name="listenerActiveStoplight" IsEnabled="False" />
         </Grid>
         <StackPanel Margin="10,0,10,10">
             <StackPanel Margin="0,0,0,15">
@@ -60,11 +60,11 @@
             </StackPanel>
             <StackPanel Margin="0,0,0,15">
                 <Label HorizontalAlignment="Center">Remote Database Server</Label>
-                <Button x:Name="databaseConnectionToggle">Connect</Button>
+                <Button x:Name="databaseConnectionToggle" IsEnabled="False">Connect</Button>
             </StackPanel>
             <StackPanel Margin="0,0,0,15">
                 <Label HorizontalAlignment="Center">HTTP Listener</Label>
-                <Button x:Name="httpListenerToggle">Enable</Button>
+                <Button x:Name="httpListenerToggle" IsEnabled="False">Enable</Button>
             </StackPanel>
         </StackPanel>
     </Grid>

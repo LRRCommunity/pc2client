@@ -8,12 +8,13 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>PC2Client</RootNamespace>
-    <AssemblyName>pc2client</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <AssemblyName>ACClient</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -42,19 +43,20 @@
     <ApplicationIcon>car.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="libpcars2">
-      <HintPath>..\libpcars2.dll</HintPath>
+    <Reference Include="AssettoCorsaSharedMemory">
+      <HintPath>..\libs\AssettoCorsaSharedMemory.dll</HintPath>
     </Reference>
     <Reference Include="LiteDB, Version=4.1.4.0, Culture=neutral, PublicKeyToken=4ee40123013c9f27, processorArchitecture=MSIL">
       <HintPath>..\packages\LiteDB.4.1.4\lib\net40\LiteDB.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\portable-net45+win8+wp8+wpa81\System.Numerics.Vectors.dll</HintPath>
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
@@ -78,16 +80,16 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="ApiPostHandler.cs" />
+    <None Include="ApiPostHandler.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DataTransfer\DatabaseExport.cs" />
-    <Compile Include="DataTransfer\DatabaseExportImpl.cs" />
+    <None Include="DataTransfer\DatabaseExport.cs" />
+    <None Include="DataTransfer\DatabaseExportImpl.cs" />
     <Compile Include="DataTransfer\LocalDbEntry.cs" />
-    <Compile Include="DataTransfer\OverlayExport.cs" />
-    <Compile Include="DataTransfer\OverlayExportImpl.cs" />
+    <None Include="DataTransfer\OverlayExport.cs" />
+    <None Include="DataTransfer\OverlayExportImpl.cs" />
     <Compile Include="DataTransfer\ReturnData.cs" />
     <Compile Include="GameConnectHandler.cs" />
     <Compile Include="MainWindow.xaml.cs">
@@ -100,7 +102,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OverlayServerHandler.cs" />
+    <None Include="OverlayServerHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

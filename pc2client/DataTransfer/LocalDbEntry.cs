@@ -20,8 +20,6 @@ namespace PC2Client.DataTransfer
 
         public DateTime Timestamp { get; internal set; }
 
-        public string Driver { get; internal set; }
-
         public byte[] CompressedTelemetry { get; internal set; }
     }
 }

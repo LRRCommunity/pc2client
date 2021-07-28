@@ -3,19 +3,14 @@
 // </copyright>
 
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Threading;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 
-using LibPCars2.SharedMemory;
+using AssettoCorsaSharedMemory;
 using LiteDB;
 
 namespace PC2Client
@@ -25,32 +20,70 @@ namespace PC2Client
     /// </summary>
     public static class GameConnectHandler
     {
-        private const int SequenceNumberOffset = 0x1C98;
-        private const string SharedMemoryTag = "$pcars2$";
-
         // Game connection objects
-        private static BackgroundWorker gameConnectionWorker = null;
-        private static bool gameIsAlive = false;
-        private static uint lastSequenceNumber = 0;
-        private static MemoryMappedFile pCarsFile = null;
-        private static MemoryMappedViewAccessor pCarsView = null;
-        private static byte[] rawData = null;
         private static LiteDatabase logDatabase = null;
+
+        private static AssettoCorsa assetto = new AssettoCorsa();
+        private static int LastPhysicsId = 0;
+        private static int LastGraphicsId = 0;
 
         /// <summary>
         /// Gets a value indicating whether the shared memory is currently open.
         /// </summary>
         internal static bool GameConnected { get; private set; } = false;
 
-        /// <summary>
-        /// Gets a value indicating whether we are attempting to open shared memory.
-        /// </summary>
-        internal static bool GameConnectionPending { get; private set; } = false;
+        internal static void onGfxUpdate(object sender, GraphicsEventArgs e)
+        {
+            Graphics gfx = e.Graphics;
+            if (gfx.PacketId != LastGraphicsId)
+            {
+                DataTransfer.LocalDbEntry entry = new DataTransfer.LocalDbEntry
+                {
+                    Timestamp = DateTime.Now,
+                    CompressedTelemetry = CompressObject(gfx),
+                };
+                logDatabase.GetCollection<DataTransfer.LocalDbEntry>("GraphicsData").Insert(entry);
+                LastGraphicsId = gfx.PacketId;
+            }
+        }
 
-        /// <summary>
-        /// Gets the most recent telemetry data from Project CARS 2.
-        /// </summary>
-        internal static TelemetryData Telemetry { get; private set; } = null;
+        internal static void onPhysicsUpdate(object sender, PhysicsEventArgs e)
+        {
+            Physics phy = e.Physics;
+            if (phy.PacketId != LastPhysicsId)
+            {
+                DataTransfer.LocalDbEntry entry = new DataTransfer.LocalDbEntry
+                {
+                    Timestamp = DateTime.Now,
+                    CompressedTelemetry = CompressObject(phy),
+                };
+                logDatabase.GetCollection<DataTransfer.LocalDbEntry>("PhysicsData").Insert(entry);
+                LastPhysicsId = phy.PacketId;
+            }
+        }
+
+        internal static void onStaticUpdate(object sender, StaticInfoEventArgs e)
+        {
+            if (!GameConnected)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MainWindow window = (MainWindow)Application.Current.MainWindow;
+                    window.gameConnectionToggle.Content = "Disconnect";
+                    window.gameConnectionToggle.IsEnabled = true;
+                    window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
+                    GameConnected = true;
+                });
+            }
+
+            StaticInfo info = e.StaticInfo;
+            DataTransfer.LocalDbEntry entry = new DataTransfer.LocalDbEntry
+            {
+                Timestamp = DateTime.Now,
+                CompressedTelemetry = CompressObject(info),
+            };
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("StaticData").Insert(entry);
+        }
 
         /// <summary>
         /// Performs actions based on the state of the game "connection".
@@ -61,38 +94,28 @@ namespace PC2Client
         {
             MainWindow window = (MainWindow)Application.Current.MainWindow;
 
-            if ((!GameConnected) && (!GameConnectionPending))
+            if (!GameConnected)
             {
                 // Connect
-                window.gameConnectionToggle.Content = "Cancel";
+                window.gameConnectionToggle.IsEnabled = false;
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
-                GameConnectionPending = true;
 
                 InitializeDatabase();
 
-                gameConnectionWorker = new BackgroundWorker();
-                gameConnectionWorker.WorkerSupportsCancellation = true;
-                gameConnectionWorker.DoWork += BeginConnect;
-                gameConnectionWorker.RunWorkerCompleted += FinishConnect;
-                gameConnectionWorker.RunWorkerAsync();
-            }
-            else if (GameConnected && (!GameConnectionPending))
-            {
-                // Disconnect
-                Reset();
-            }
-            else if ((!GameConnected) && GameConnectionPending)
-            {
-                // Cancel
-                if (gameConnectionWorker != null)
-                {
-                    ((Button)sender).IsEnabled = false;
-                    gameConnectionWorker.CancelAsync();
-                }
+                assetto.GraphicsInterval = 1000;
+                assetto.GraphicsUpdated += onGfxUpdate;
+
+                assetto.PhysicsInterval = 10;
+                assetto.PhysicsUpdated += onPhysicsUpdate;
+
+                assetto.StaticInfoInterval = 5000;
+                assetto.StaticInfoUpdated += onStaticUpdate;
+
+                assetto.Start();
             }
             else
             {
-                throw new InvalidOperationException();
+                Reset();
             }
         }
 
@@ -101,15 +124,12 @@ namespace PC2Client
         /// </summary>
         internal static void Reset()
         {
-            ReleaseMappedMemory();
-            rawData = null;
-            gameConnectionWorker = null;
+            assetto.Stop();
+            assetto.GraphicsUpdated -= onGfxUpdate;
+            assetto.PhysicsUpdated -= onPhysicsUpdate;
+            assetto.StaticInfoUpdated -= onStaticUpdate;
 
-            gameIsAlive = false;
-            lastSequenceNumber = 0;
             GameConnected = false;
-            GameConnectionPending = false;
-            Telemetry = null;
 
             if (logDatabase != null)
             {
@@ -121,87 +141,23 @@ namespace PC2Client
             if (window != null)
             {
                 window.gameConnectionToggle.Content = "Connect";
-                window.gameConnectionToggle.IsEnabled = true;
                 window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
-                window.SequenceNumberLabel.Content = "0 (Not Connected)";
             }
         }
 
-        /// <summary>
-        /// Performs upkeep tasks at a regular interval.
-        /// </summary>
-        /// <param name="sender">The object that triggered this event.</param>
-        /// <param name="e">State information for processing the event.</param>
-        internal static void Tick(object sender, EventArgs e)
+        private static byte[] CompressObject(object data)
         {
-            if (gameIsAlive)
+            if (!data.GetType().IsSerializable)
             {
-                Telemetry = ReadTelemetry();
-                if (Telemetry != null)
-                {
-                    ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
-                }
+                return Array.Empty<byte>();
             }
-            else
-            {
-                int processCount = Process.GetProcesses().Count(p => p.ProcessName.StartsWith("pcars2", true, null));
-                if (processCount > 0)
-                {
-                    TelemetryData t = ReadTelemetry(true);
-                    if (t != null && t.SequenceNumber == 0)
-                    {
-                        gameIsAlive = true;
-                        Telemetry = t;
-                        ((MainWindow)Application.Current.MainWindow).SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
-                        ((MainWindow)Application.Current.MainWindow).gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
-                    }
-                }
-            }
-        }
 
-        private static void BeginConnect(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker worker = (BackgroundWorker)sender;
-            int remainingAttempts = 5;
-            e.Result = null;
-
-            while (remainingAttempts > 0)
-            {
-                if (worker.CancellationPending)
-                {
-                    e.Cancel = true;
-                    return;
-                }
-
-                try
-                {
-                    pCarsFile = MemoryMappedFile.OpenExisting(SharedMemoryTag, MemoryMappedFileRights.Read);
-                    pCarsView = pCarsFile.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
-                    rawData = new byte[pCarsView.Capacity];
-                    TelemetryData t = ReadTelemetry(true);
-
-                    e.Result = t;
-                    return;
-                }
-                catch (FileNotFoundException)
-                {
-                    // Game hasn't finished loading, just wait.
-                }
-
-                if (--remainingAttempts > 0)
-                {
-                    Thread.Sleep(TimeSpan.FromMilliseconds(1000));
-                }
-            }
-        }
-
-        private static byte[] CompressBinary(byte[] data)
-        {
             using (MemoryStream mem = new MemoryStream())
             {
                 using (GZipStream compressor = new GZipStream(mem, CompressionLevel.Fastest, true))
                 {
-                    compressor.Write(data, 0, data.Length);
+                    BinaryFormatter serializer = new BinaryFormatter();
+                    serializer.Serialize(compressor, data);
                 }
 
                 mem.Seek(0, SeekOrigin.Begin);
@@ -212,196 +168,27 @@ namespace PC2Client
             }
         }
 
-        private static void FinishConnect(object sender, RunWorkerCompletedEventArgs e)
-        {
-            MainWindow window = (MainWindow)Application.Current.MainWindow;
-
-            if (e.Error != null)
-            {
-                ReleaseMappedMemory();
-                rawData = null;
-
-                if (logDatabase != null)
-                {
-                    logDatabase.Dispose();
-                    logDatabase = null;
-                }
-
-                window.gameConnectionToggle.Content = "Connect";
-                window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
-
-                GameConnected = false;
-                GameConnectionPending = false;
-
-                throw e.Error;
-            }
-            else if (e.Cancelled)
-            {
-                ReleaseMappedMemory();
-                rawData = null;
-
-                if (logDatabase != null)
-                {
-                    logDatabase.Dispose();
-                    logDatabase = null;
-                }
-
-                window.gameConnectionToggle.Content = "Connect";
-                window.gameConnectionToggle.IsEnabled = true;
-                window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
-
-                GameConnected = false;
-                GameConnectionPending = false;
-            }
-            else
-            {
-                if (e.Result != null)
-                {
-                    // Opened successfully
-                    gameIsAlive = true;
-                    Telemetry = (TelemetryData)e.Result;
-                    window.SequenceNumberLabel.Content = string.Format("{0:D}", Telemetry.SequenceNumber);
-
-                    window.gameConnectionToggle.Content = "Disconnect";
-                    window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["greenStoplight"];
-
-                    GameConnected = true;
-                    GameConnectionPending = false;
-                }
-                else
-                {
-                    // Failed to open file
-                    ReleaseMappedMemory();
-                    rawData = null;
-
-                    if (logDatabase != null)
-                    {
-                        logDatabase.Dispose();
-                        logDatabase = null;
-                    }
-
-                    window.gameConnectionToggle.Content = "Connect";
-                    window.gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["redStoplight"];
-
-                    GameConnected = false;
-                    GameConnectionPending = false;
-                }
-            }
-
-            gameConnectionWorker = null;
-        }
-
         private static void InitializeDatabase()
         {
             string userName = Properties.Settings.Default.ApiUsername;
-            string fileName = "./ProjectCARS.ldb";
+            string fileName = "./LRRmans_2020.ldb";
 
             if (!string.IsNullOrWhiteSpace(userName))
             {
-                fileName = string.Format("./{0}.ProjectCARS.ldb", userName);
+                fileName = string.Format("./{0}.LRRmans_2020.ldb", userName);
             }
 
             logDatabase = new LiteDatabase(fileName);
             logDatabase.Log.Logging += WriteDatabaseLog;
             logDatabase.Log.Level = Logger.ERROR | Logger.RECOVERY;
-            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("telemetryLog").EnsureIndex(t => t.Timestamp);
-        }
-
-        private static uint? ReadRawData(int attempts = 5)
-        {
-            int i = attempts;
-            uint sequenceNumberBegin, sequenceNumberEnd = 0;
-            do
-            {
-                int j = attempts;
-                do
-                {
-                    sequenceNumberBegin = pCarsView.ReadUInt32(SequenceNumberOffset);
-                }
-                while ((sequenceNumberBegin % 2 == 1) && (--j > 0));
-
-                if (j == 0)
-                {
-                    continue;
-                }
-
-                pCarsView.ReadArray(0, rawData, 0, rawData.Length);
-
-                sequenceNumberEnd = BitConverter.ToUInt32(rawData, SequenceNumberOffset);
-            }
-            while ((sequenceNumberBegin != sequenceNumberEnd) && (--i > 0));
-
-            if (i == 0)
-            {
-                return null;
-            }
-            else
-            {
-                return sequenceNumberEnd;
-            }
-        }
-
-        private static TelemetryData ReadTelemetry(bool force = false)
-        {
-            uint? sequenceNumberEnd = ReadRawData();
-            if (sequenceNumberEnd == null)
-            {
-                return Telemetry;
-            }
-
-            byte[] compressedTelemetry = CompressBinary(rawData);
-            DataTransfer.LocalDbEntry dbEntry = new DataTransfer.LocalDbEntry();
-            dbEntry.Timestamp = DateTime.Now;
-            dbEntry.Driver = OverlayServerHandler.ReturnData.DriverName;
-            dbEntry.CompressedTelemetry = compressedTelemetry;
-            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("telemetryLog").Insert(dbEntry);
-
-            TelemetryData tData = null;
-
-            if (force)
-            {
-                tData = new TelemetryData(rawData);
-                return tData;
-            }
-
-            if (sequenceNumberEnd > 0 && sequenceNumberEnd == lastSequenceNumber)
-            {
-                int processCount = Process.GetProcesses().Count(p => p.ProcessName.StartsWith("pcars2", true, null));
-                if (processCount == 0)
-                {
-                    // Game crashed, clean up the mess
-                    gameIsAlive = false;
-                    ((MainWindow)Application.Current.MainWindow).gameConnectedStoplight.Fill = (Brush)Application.Current.Resources["yellowStoplight"];
-                    return null;
-                }
-            }
-            else
-            {
-                lastSequenceNumber = sequenceNumberEnd.Value;
-            }
-
-            tData = new TelemetryData(rawData);
-            return tData;
-        }
-
-        private static void ReleaseMappedMemory()
-        {
-            if (pCarsView != null)
-            {
-                pCarsView.Dispose();
-                pCarsView = null;
-            }
-
-            if (pCarsFile != null)
-            {
-                pCarsFile.Dispose();
-                pCarsFile = null;
-            }
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("StaticData").EnsureIndex(t => t.Timestamp);
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("GraphicsData").EnsureIndex(t => t.Timestamp);
+            logDatabase.GetCollection<DataTransfer.LocalDbEntry>("PhysicsData").EnsureIndex(t => t.Timestamp);
         }
 
         private static void WriteDatabaseLog(string logEntry)
         {
-            using (var logFile = new StreamWriter("./ProjectCARS.LiteDB.log", true, new UTF8Encoding(false)))
+            using (var logFile = new StreamWriter("./LRRmans.LiteDB.log", true, new UTF8Encoding(false)))
             {
                 logFile.WriteLine(logEntry);
             }
